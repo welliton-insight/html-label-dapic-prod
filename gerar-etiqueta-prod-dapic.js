@@ -393,7 +393,7 @@ const formatClienteFinderStyle = (text, maxLength = 66) => {
                 display: block !important; 
                 float: none !important;
                 position: relative !important;
-                zoom: 99%;
+                zoom: 96%;
                 -webkit-print-color-adjust: exact; 
                 print-color-adjust: exact; 
             }
