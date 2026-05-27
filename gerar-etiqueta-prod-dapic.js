@@ -11,11 +11,11 @@
     let lastValidProduto = "";
 
     // Função para truncar o texto no meio (Estilo Apple Finder)
-    const formatClienteFinderStyle = (text, maxLength = 95) => {
+    const formatClienteFinderStyle = (text, maxLength = 66) => {
         if (!text || text.length <= maxLength) return text;
         
-        // Mantém 25 caracteres no início e 25 no fim, unindo com "..." (Total: 53 caracteres)
-        const charsToKeep = 45; 
+        // Mantém 30 caracteres no início e 30 no fim, unindo com "..." (Total: 63 caracteres)
+        const charsToKeep = 30; 
         const start = text.substring(0, charsToKeep).trim();
         const end = text.substring(text.length - charsToKeep).trim();
         
