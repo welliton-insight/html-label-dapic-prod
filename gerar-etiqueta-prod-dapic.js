@@ -10,17 +10,67 @@
     let lastValidRef = "";
     let lastValidProduto = "";
 
-    // Função para truncar o texto no meio (Estilo Apple Finder)
-    const formatClienteFinderStyle = (text, maxLength = 66) => {
-        if (!text || text.length <= maxLength) return text;
-        
-        // Mantém 30 caracteres no início e 30 no fim, unindo com "..." (Total: 63 caracteres)
-        const charsToKeep = 30; 
-        const start = text.substring(0, charsToKeep).trim();
-        const end = text.substring(text.length - charsToKeep).trim();
-        
-        return `${start}...${end}`;
-    };
+// Função Inteligente para truncar no meio sem quebrar palavras (Estilo Finder Avançado)
+const formatClienteFinderStyle = (text, maxLength = 66) => {
+    if (!text || text.length <= maxLength) return text;
+
+    // Espaço real disponível para as letras (descontando os "...")
+    const targetLength = maxLength - 3;
+    const words = text.split(" ");
+    
+    let startStr = "";
+    let endStr = "";
+    
+    // Distribuímos o peso ideal: um pouco mais de prioridade para o início do nome
+    const idealStartLength = Math.ceil(targetLength * 0.55);
+    const idealEndLength = targetLength - idealStartLength;
+
+    // 1. Monta o Início com palavras completas
+    let currentStartLength = 0;
+    for (let i = 0; i < words.length; i++) {
+        const word = words[i];
+        // Verifica se a palavra cabe sem estourar o limite ideal
+        if (currentStartLength + word.length + (startStr ? 1 : 0) <= idealStartLength) {
+            startStr += (startStr ? " " : "") + word;
+            currentStartLength = startStr.length;
+        } else {
+            // FALLBACK SE A PALAVRA FOR GIGANTE (Ex: LIVRAMENTO)
+            // Se não pegou quase nada do início, corta a palavra mantendo o começo dela
+            if (startStr.length < idealStartLength * 0.6) {
+                const remainingSpace = idealStartLength - startStr.length - (startStr ? 1 : 0);
+                if (remainingSpace > 3) {
+                    startStr += (startStr ? " " : "") + word.substring(0, remainingSpace);
+                }
+            }
+            break;
+        }
+    }
+
+    // 2. Monta o Fim com palavras completas (de trás para frente)
+    let currentEndLength = 0;
+    const maxAllowedEndLength = targetLength - startStr.length;
+
+    for (let i = words.length - 1; i >= 0; i--) {
+        const word = words[i];
+        // Se a palavra já foi usada no início, não repete
+        if (startStr.includes(word) && text.indexOf(word) < startStr.length) {
+            break;
+        }
+
+        if (currentEndLength + word.length + (endStr ? 1 : 0) <= maxAllowedEndLength) {
+            endStr = word + (endStr ? " " : "") + endStr;
+            currentEndLength = endStr.length;
+        } else {
+            break;
+        }
+    }
+
+    // Remove espaços extras nas pontas antes de juntar
+    startStr = startStr.trim();
+    endStr = endStr.trim();
+
+    return `${startStr}...${endStr}`;
+};
 
     // =========================================================================
     // STEP 1: Gerador de QR Code com Dupla Camada (API -> Fallback Local)
@@ -291,7 +341,7 @@
 
         // Dicionário de tags base comuns (Usa o clienteFormatado com tratamento anti-quebra)
         const tags = {
-            "#Cliente": `<span style="font-size:90%; white-space: nowrap;">${clienteFormatado}</span>`,
+            "#Cliente": `<span style="font-size:90%; white-space: nowrap; display: inline-block;">${clienteFormatado.trim()}</span>`,
             "#Responsavel": "EUGENIO",
             "#Emissao": today,
             "#Previsao": previsao,
