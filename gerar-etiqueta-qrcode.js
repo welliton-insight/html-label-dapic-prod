@@ -1,24 +1,38 @@
 (async () => {
-    console.log("Label Automation Script started...");
+    console.log("Label Automation Script started via InjectJS...");
 
     const currentUrl = window.location.href;
-    const targetSize = 72; // 10% reduced fit size (72x72)
+    const origin = window.location.origin;
+    const targetSize = 72; // Tamanho do QR code reduzido em 10%
     let qrSrc = "";
 
+    // Variáveis persistentes para reter os últimos valores válidos de Ref e Produto
+    let lastValidRef = "";
+    let lastValidProduto = "";
+
+    // Função para truncar o texto no meio (Estilo Apple Finder)
+    const formatClienteFinderStyle = (text, maxLength = 55) => {
+        if (!text || text.length <= maxLength) return text;
+        
+        // Mantém 25 caracteres no início e 25 no fim, unindo com "..." (Total: 53 caracteres)
+        const charsToKeep = 25; 
+        const start = text.substring(0, charsToKeep).trim();
+        const end = text.substring(text.length - charsToKeep).trim();
+        
+        return `${start}...${end}`;
+    };
+
     // =========================================================================
-    // STEP 1: Dual-Layered Ordered QR Code Generation Engine
+    // STEP 1: Gerador de QR Code com Dupla Camada (API -> Fallback Local)
     // =========================================================================
-    
-    // Method A: api.qrserver.com (Primary)
     try {
-        console.log("Attempting QR generation via api.qrserver.com...");
+        console.log("Tentando gerar QR Code via api.qrserver.com...");
         qrSrc = await new Promise((resolve, reject) => {
             const img = new Image();
-            
             const timeout = setTimeout(() => {
                 img.onload = null;
                 img.onerror = null;
-                reject(new Error("api.qrserver.com timed out after 3500ms"));
+                reject(new Error("api.qrserver.com expirou após 3500ms"));
             }, 3500);
 
             img.onload = () => {
@@ -28,20 +42,18 @@
 
             img.onerror = () => {
                 clearTimeout(timeout);
-                reject(new Error("api.qrserver.com network request failed (likely CSP blocked)"));
+                reject(new Error("Falha na rede ao chamar api.qrserver.com"));
             };
 
             img.src = `https://api.qrserver.com/v1/create-qr-code/?size=${targetSize}x${targetSize}&data=${encodeURIComponent(currentUrl)}`;
         });
-        console.log("Successfully loaded QR from API server.");
+        console.log("QR Code carregado com sucesso do servidor da API.");
     } 
-    // Method B: qrcode.js (Fallback)
     catch (apiError) {
         console.warn(apiError.message);
-        console.log("Switching to fallback method: qrcode.js...");
+        console.log("Alternando para o método de contingência: qrcode.js...");
 
         try {
-            // Ensure qrcode.js is available on the window object
             if (!window.QRCode) {
                 await new Promise((resolve, reject) => {
                     const script = document.createElement('script');
@@ -50,25 +62,23 @@
                     const timeout = setTimeout(() => {
                         script.onload = null;
                         script.onerror = null;
-                        reject(new Error("qrcode.js library load timed out after 3500ms"));
+                        reject(new Error("Injeção do qrcode.js expirou após 3500ms"));
                     }, 3500);
 
                     script.onload = () => {
                         clearTimeout(timeout);
-                        console.log("qrcode.js script file injected successfully.");
                         resolve();
                     };
 
                     script.onerror = () => {
                         clearTimeout(timeout);
-                        reject(new Error("Failed to inject qrcode.js script file"));
+                        reject(new Error("Falha ao carregar o script qrcode.js"));
                     };
 
                     document.head.appendChild(script);
                 });
             }
 
-            // Create temporary container to compile canvas/image
             const qrContainer = document.createElement('div');
             new window.QRCode(qrContainer, {
                 text: currentUrl,
@@ -79,13 +89,10 @@
                 correctLevel: window.QRCode.CorrectLevel.H
             });
 
-            // Poll the container to extract the generated image source
             qrSrc = await new Promise((resolve, reject) => {
-                const startTime = Date.now();
-                
                 const timeout = setTimeout(() => {
                     clearInterval(interval);
-                    reject(new Error("qrcode.js rendering timed out after 3500ms"));
+                    reject(new Error("Renderização do qrcode.js expirou após 3500ms"));
                 }, 3500);
 
                 const interval = setInterval(() => {
@@ -103,61 +110,68 @@
                     }
                 }, 100);
             });
-            console.log("Successfully generated local base64 fallback QR.");
+            console.log("QR Code em Base64 local gerado com sucesso.");
         } catch (fallbackError) {
-            console.error("Both QR methods failed or timed out:", fallbackError.message);
-            // Safety parachute URL: sets target string to API structure so code execution doesn't halt completely
+            console.error("Ambos os métodos de QR Code falharam:", fallbackError.message);
             qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=${targetSize}x${targetSize}&data=${encodeURIComponent(currentUrl)}`;
         }
     }
 
-    // Centered table layout template for the extracted source
     const qrHtml = `
         <div style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; text-align: center;">
             <img src="${qrSrc}" style="width: ${targetSize}px; height: ${targetSize}px; display: block; margin: 0 auto;" />
         </div>
     `.trim();
 
-
     // =========================================================================
-    // STEP 2: Main Application Interface Scraping
+    // STEP 2: Coleta e Sincronização de Dados da Tela Atual
     // =========================================================================
     const btn = document.querySelector('a[data-bind*="CarregarProdutos"]');
     if (btn) {
         btn.click();
-        console.log("Refreshing system products grid. Pausing workflow for 3000ms...");
+        console.log("Atualizando a grade de produtos. Aguardando 3 segundos...");
         await new Promise(r => setTimeout(r, 3000));
     }
 
-    // Collect targeted system records
-    const anchorElement = document.querySelector('a[href*="#editar/"]'); 
-    const origin = window.location.origin; 
-    const rawHref = anchorElement ? anchorElement.getAttribute('href') : ""; 
+    const allRows = Array.from(document.querySelectorAll("#grid-produtos > tbody > tr"));
+    const dataRows = allRows.filter(tr => tr.querySelector('[data-index="3"]') || tr.querySelector('td.coluna-produto'));
 
+    if (dataRows.length === 0) {
+        alert("Nenhum produto foi localizado na tabela '#grid-produtos'. Certifique-se de que a grade foi carregada.");
+        return;
+    }
+
+    const anchorElement = document.querySelector('a[href*="#editar/"]'); 
+    const rawHref = anchorElement ? anchorElement.getAttribute('href') : ""; 
     const idMatch = rawHref ? rawHref.match(/#editar\/(\d+)/) : null;
-    const id = idMatch ? idMatch[1] : "";
-    const fetchUrl = `${origin}/admin/pedidovenda/editar?id=${id}`;
+    const idPedido = idMatch ? idMatch[1] : "";
+    const fetchUrlCliente = `${origin}/admin/pedidovenda/editar?id=${idPedido}`;
 
     let cliente = "";
-    if (id) {
+    if (idPedido) {
         try {
-            const resCliente = await fetch(fetchUrl, { method: "GET", credentials: "include" });
+            const resCliente = await fetch(fetchUrlCliente, { method: "GET", credentials: "include" });
             const htmlCliente = await resCliente.text();
             const match = htmlCliente.match(/IdPessoaSelect2"\s*:\s*\{\s*"id"\s*:\s*\d+,\s*"text"\s*:\s*"([^"]+)"/);
             cliente = match ? match[1] : "";
         } catch (err) {
-            console.error("Failed to parse client records:", err);
+            console.error("Falha ao processar dados do cliente:", err);
         }
     }
 
-    // Fetch master label document template layout from Github distribution
-    const url = `https://raw.githubusercontent.com/welliton-insight/html-label-dapic-prod/main/Etiqueta-camisa-basica-v2-p4.html?t=${new Date().getTime()}`;
-    const res = await fetch(url);
-    const buffer = await res.arrayBuffer();
-    const decoder = new TextDecoder("utf-8");
-    const htmlTemplate = decoder.decode(buffer);
+    // Aplica a redução dinâmica no nome do cliente (Máximo 55 caracteres com corte central)
+    const clienteFormatado = formatClienteFinderStyle(cliente, 55);
 
-    // Context metadata strings
+    // Baixar o template Etiqueta2 do GitHub
+    const urlTemplate = `https://raw.githubusercontent.com/welliton-insight/html-label-dapic-prod/main/Etiqueta-camisa-basica-v3-p4.html?t=${new Date().getTime()}`;
+    const resTemplate = await fetch(urlTemplate);
+    const buffer = await resTemplate.arrayBuffer();
+    const decoder = new TextDecoder("utf-8");
+    let htmlTemplate = decoder.decode(buffer);
+
+    // CORREÇÃO CRÍTICA: Remove comentários condicionais do Excel que quebram o DOMParser
+    htmlTemplate = htmlTemplate.replace(/<!\[if [^\]]+\]>([\s\S]*?)<!\[endif\]>/g, '$1');
+
     const today = new Date().toLocaleDateString("pt-BR");
     const previsao = document.querySelector("#DataPrevisaoManual")?.value || "";
 
@@ -166,36 +180,85 @@
         ?.textContent.trim() || "";
     const empresa = empresaFull.split(" ")[0] || "";
 
-    const allRows = Array.from(document.querySelectorAll("#grid-produtos > tbody > tr"));
-    const dataRows = allRows.filter(tr => tr.querySelector('[data-index="3"]'));
-
-    let amount = dataRows.length; 
-    const paginationSpan = document.querySelector("#grid-produtos > tfoot > tr > td > div.neuegrid-pagination > span.records-position");
-    if (paginationSpan) {
-        const parts = paginationSpan.textContent.split("de");
-        if (parts.length > 1) {
-            amount = parseInt(parts[1].trim(), 10) || amount;
-        }
-    }
-
-    const rowsToProcess = dataRows.slice(0, amount);
-
     const parser = new DOMParser();
     const doc = parser.parseFromString(htmlTemplate, "text/html");
     const templateTable = doc.querySelector("table");
 
     if (!templateTable) {
-        alert("Nenhuma tabela <table> encontrada no template HTML.");
+        alert("Nenhuma tabela <table> encontrada no template HTML pós-limpeza. Verifique o arquivo.");
         return;
     }
 
     const tableHTMLString = templateTable.outerHTML;
     let allTablesHTML = "";
-    let currentRef = "";
-    let currentProduto = "";
 
-    // Parse loop array data mappings
-    for (const tr of rowsToProcess) {
+    // =========================================================================
+    // STEP 3: Loop Principal pelas Linhas via Ficha Técnica
+    // =========================================================================
+    for (let i = 0; i < dataRows.length; i++) {
+        const tr = dataRows[i];
+        let productId = "";
+
+        try {
+            if (typeof ko !== 'undefined') {
+                const koData = ko.dataFor(tr) || ko.dataFor(tr.querySelector('td'));
+                if (koData) {
+                    productId = typeof koData.Id === 'function' ? koData.Id() : koData.Id;
+                }
+            }
+        } catch (e) {}
+
+        if (!productId) {
+            productId = tr.getAttribute("data-id") || 
+                        tr.getAttribute("data-row-id") || 
+                        tr.id?.match(/\d+/)?.[0] || 
+                        tr.querySelector('input[type="checkbox"]')?.value;
+        }
+
+        const rowTecidos = [];
+        const rowLinhas = [];
+        const rowFios = [];
+
+        if (productId) {
+            try {
+                const resFicha = await fetch(`${origin}/admin/fichatecnicaprodutoordemproducao/carregar?idProdutoOrdemProducao=${productId}`, {
+                    method: "GET",
+                    credentials: "include"
+                });
+                const fichaJson = await resFicha.json();
+
+                if (fichaJson && Array.isArray(fichaJson.FichasTecnicas)) {
+                    fichaJson.FichasTecnicas.forEach(ft => {
+                        if (Array.isArray(ft.Consumos)) {
+                            ft.Consumos.forEach(c => {
+                                const referencia = c.Referencia ? c.Referencia.trim() : "";
+                                const descricao = c.Descricao ? c.Descricao.trim() : "";
+                                const cor = c.DescricaoCor ? c.DescricaoCor.trim() : "";
+
+                                const refUpper = referencia.toUpperCase();
+                                const descUpper = descricao.toUpperCase();
+
+                                const formattedString = `<span style="font-size: 80%;">${referencia} - ${descricao} - ${cor}</span>`;
+
+                                if (refUpper.startsWith("TECIDO") || descUpper.startsWith("TECIDO") || refUpper.startsWith("MP.R")) {
+                                    rowTecidos.push(formattedString);
+                                } else if (refUpper.startsWith("LINHA") || refUpper.includes(".L") || refUpper.includes("MP.L")) { 
+                                    rowLinhas.push(formattedString);
+                                } else if (refUpper.startsWith("FIO") || refUpper.includes(".F") || refUpper.includes("MP.F")) { 
+                                    rowFios.push(formattedString);
+                                }
+                            });
+                        }
+                    });
+                }
+            } catch (fichaErr) {
+                console.error(`Erro ao carregar Ficha Técnica para o produto ID ${productId}:`, fichaErr);
+            }
+        }
+
+        // Captura e tratamento com Fallback para Ref e Produto
+        let currentRef = "";
+        let currentProduto = "";
         const productTd = tr.querySelector("td.coluna-produto");
         if (productTd) {
             const span = productTd.querySelector("span");
@@ -207,14 +270,28 @@
             }
         }
 
+        // Lógica de fallback estável
+        if (currentRef) {
+            lastValidRef = currentRef;
+        } else {
+            currentRef = lastValidRef;
+        }
+
+        if (currentProduto) {
+            lastValidProduto = currentProduto;
+        } else {
+            currentProduto = lastValidProduto;
+        }
+
         const T = tr.querySelector('td[data-index="3"] > span')?.textContent.trim() || "";
         const lote = tr.querySelector('td[data-index="4"]')?.textContent.trim() || "";
         const cod = tr.querySelector('td[data-index="5"]')?.textContent.trim() || "";
         const Qtd = tr.querySelector('td[data-index="6"]')?.textContent.trim() || "";
         const OP = empresa && cod ? `${empresa} - ${cod}` : cod;
 
+        // Dicionário de tags base comuns (Usa o clienteFormatado com tratamento anti-quebra)
         const tags = {
-            "#Cliente": `<span style="font-size:90%">${cliente}</span>`,
+            "#Cliente": `<span style="font-size:90%; white-space: nowrap;">${clienteFormatado}</span>`,
             "#Responsavel": "EUGENIO",
             "#Emissao": today,
             "#Previsao": previsao,
@@ -224,37 +301,83 @@
             "#Lote": lote,
             "#Ref": currentRef,
             "#Produto": `<span style="font-size:90%">${currentProduto}</span>`,
-            "#QR": qrHtml 
+            "#QR": qrHtml
         };
 
+        // GERAÇÃO DAS PILHAS (STACKS):
+        const tecidosStack = rowTecidos.join("<br />");
+        const linhasStack = rowLinhas.join("<br />");
+        const fiosStack = rowFios.join("<br />");
+
+        tags["#Tecido"] = tecidosStack || "";
+        tags["#tecido"] = tecidosStack || "";
+        
+        tags["#Linha1"] = rowLinhas[0] || "";
+        tags["#Linha2"] = rowLinhas[1] || rowLinhas[0] || ""; 
+        tags["#Linha"] = linhasStack || "";
+        tags["#linha"] = linhasStack || "";
+
+        tags["#Fio"] = fiosStack || "";
+        tags["#fio"] = fiosStack || "";
+
+        // Executar substituição textual completa na estrutura do template
         let currentTableHTML = tableHTMLString;
         for (const [tag, value] of Object.entries(tags)) {
             currentTableHTML = currentTableHTML.replaceAll(tag, value);
         }
-        allTablesHTML += currentTableHTML;
+
+        // Limpeza de segurança para remover placeholders não preenchidos
+        currentTableHTML = currentTableHTML.replace(/#(tecido|Linha|Fio|linha|fio|Tecido)\d*/g, "");
+
+        // Mantém o empilhamento sem gaps nas tabelas da mesma folha
+        allTablesHTML += `<div class="etiqueta-container" style="page-break-inside: avoid !important; break-inside: avoid !important; display: block !important; clear: both !important; margin-bottom: 0px !important; padding-bottom: 5px !important;">${currentTableHTML}</div>`;
     }
 
     templateTable.outerHTML = allTablesHTML;
 
-    // Inject scaling rules styles
+    // Ajustes de impressão em tamanho de página A4
     const stylePrint = doc.createElement("style");
     stylePrint.textContent = `
-        @page { size: A4 portrait; margin: 0.5cm; }
+        @page { size: A4 portrait; margin: 0.5cm 0.5cm 0.5cm 0.4cm; }
         @media print {
-            body { zoom: 82%; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            html, body { 
+                display: block !important; 
+                float: none !important;
+                position: relative !important;
+                zoom: 96%;
+                -webkit-print-color-adjust: exact; 
+                print-color-adjust: exact; 
+            }
+            
+            .etiqueta-container {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                page-break-after: auto !important;
+                break-after: auto !important;
+            }
+
+            table, tr, td {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            
+            table {
+                display: table !important;
+                float: none !important;
+                margin-bottom: 0px !important;
+            }
         }
     `;
     doc.head.appendChild(stylePrint);
 
-
     // =========================================================================
-    // STEP 3: Safe Window Initialization (Only triggers once QR logic is complete)
+    // STEP 4: Instanciação e Disparo da Impressão
     // =========================================================================
-    console.log("Opening compilation presentation output window...");
+    console.log("Abrindo janela de visualização de impressão final...");
     const finalHtml = doc.documentElement.outerHTML;
     const w = window.open();
     if (!w) {
-        alert("O bloqueador de pop-ups impediu a janela de impressão. Por favor, autorize pop-ups para este site.");
+        alert("O bloqueador de pop-ups impediu a abertura da janela. Por favor, autorize pop-ups para este site.");
         return;
     }
     
