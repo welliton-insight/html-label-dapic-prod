@@ -344,7 +344,7 @@
                 display: block !important; 
                 float: none !important;
                 position: relative !important;
-                zoom: 96%;
+                zoom: 99%;
                 -webkit-print-color-adjust: exact; 
                 print-color-adjust: exact; 
             }
