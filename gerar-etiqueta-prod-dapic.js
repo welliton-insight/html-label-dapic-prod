@@ -71,7 +71,6 @@ const formatClienteFinderStyle = (text, maxLength = 66) => {
 
     return `${startStr}...${endStr}`;
 };
-const clienteFormatado = formatClienteFinderStyle(cliente, 66);
     // =========================================================================
     // STEP 1: Gerador de QR Code com Dupla Camada (API -> Fallback Local)
     // =========================================================================
@@ -338,7 +337,7 @@ const clienteFormatado = formatClienteFinderStyle(cliente, 66);
         const cod = tr.querySelector('td[data-index="5"]')?.textContent.trim() || "";
         const Qtd = tr.querySelector('td[data-index="6"]')?.textContent.trim() || "";
         const OP = empresa && cod ? `${empresa} - ${cod}` : cod;
-
+        const clienteFormatado = formatClienteFinderStyle(cliente, 66);
         // Dicionário de tags base comuns (Usa o clienteFormatado com tratamento anti-quebra)
         const tags = {
             "#Cliente": `<span style="font-size:90%; white-space: nowrap; display: inline-block;">${clienteFormatado.trim()}</span>`,
