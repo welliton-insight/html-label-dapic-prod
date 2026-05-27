@@ -71,7 +71,7 @@ const formatClienteFinderStyle = (text, maxLength = 66) => {
 
     return `${startStr}...${endStr}`;
 };
-
+const clienteFormatado = formatClienteFinderStyle(cliente, 66);
     // =========================================================================
     // STEP 1: Gerador de QR Code com Dupla Camada (API -> Fallback Local)
     // =========================================================================
