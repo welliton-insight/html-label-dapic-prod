@@ -378,10 +378,10 @@ const formatClienteFinderStyle = (text, maxLength = 66) => {
         // Limpeza de segurança para remover placeholders não preenchidos
         currentTableHTML = currentTableHTML.replace(/#(tecido|Linha|Fio|linha|fio|Tecido)\d*/g, "");
 
-        // Mantém o empilhamento sem gaps nas tabelas da mesma folha
-        allTablesHTML += `<div class="etiqueta-container" style="page-break-inside: avoid !important; break-inside: avoid !important; display: block !important; clear: both !important; margin-bottom: 0px !important; padding-bottom: 5px !important;">${currentTableHTML}</div>`;
+        // Mantém o empilhamento contínuo sem forçar quebras ou limpezas severas
+        allTablesHTML += `<div class="etiqueta-container" style="display: block !important; margin-bottom: 0px !important; padding-bottom: 5px !important;">${currentTableHTML}</div>`;
     }
-
+        
     templateTable.outerHTML = allTablesHTML;
 
     // Ajustes de impressão em tamanho de página A4
