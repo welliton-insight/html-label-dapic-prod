@@ -340,7 +340,7 @@ const formatClienteFinderStyle = (text, maxLength = 66) => {
         const clienteFormatado = formatClienteFinderStyle(cliente, 66);
         // Dicionário de tags base comuns (Usa o clienteFormatado com tratamento anti-quebra)
         const tags = {
-            "#Cliente": `<span style="font-size:90%; white-space: nowrap; display: inline-block;">${clienteFormatado.trim()}</span>`,
+            "#Cliente": clienteFormatado,
             "#Responsavel": "EUGENIO",
             "#Emissao": today,
             "#Previsao": previsao,
@@ -349,7 +349,7 @@ const formatClienteFinderStyle = (text, maxLength = 66) => {
             "#OP": OP,
             "#Lote": lote,
             "#Ref": currentRef,
-            "#Produto": `<span style="font-size:90%">${currentProduto}</span>`,
+            "#Produto": currentProduto,
             "#QR": qrHtml
         };
 
