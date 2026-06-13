@@ -209,7 +209,7 @@ const formatClienteFinderStyle = (text, maxLength = 66) => {
     }
 
     // Aplica a redução dinâmica no nome do cliente (Máximo 55 caracteres com corte central)
-    const clienteFormatado = formatClienteFinderStyle(cliente, 55);
+    const clienteFormatado = cliente;
 
     // Baixar o template Etiqueta2 do GitHub
     const urlTemplate = `https://raw.githubusercontent.com/welliton-insight/html-label-dapic-prod/main/Etiqueta-camisa-basica-p4.html?t=${new Date().getTime()}`;
