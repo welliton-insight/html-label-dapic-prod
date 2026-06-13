@@ -340,7 +340,7 @@ const formatClienteFinderStyle = (text, maxLength = 66) => {
         const clienteFormatado = formatClienteFinderStyle(cliente, 66);
         // Dicionário de tags base comuns (Usa o clienteFormatado com tratamento anti-quebra)
         const tags = {
-            "#Cliente": clienteFormatado,
+            "#Cliente": cliente,
             "#Responsavel": "EUGENIO",
             "#Emissao": today,
             "#Previsao": previsao,
