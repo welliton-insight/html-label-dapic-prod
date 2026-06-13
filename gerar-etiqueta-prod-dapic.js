@@ -212,7 +212,7 @@ const formatClienteFinderStyle = (text, maxLength = 66) => {
     const clienteFormatado = formatClienteFinderStyle(cliente, 55);
 
     // Baixar o template Etiqueta2 do GitHub
-    const urlTemplate = `https://raw.githubusercontent.com/welliton-insight/html-label-dapic-prod/main/Etiqueta-camisa-basica-v3-p4.html?t=${new Date().getTime()}`;
+    const urlTemplate = `https://raw.githubusercontent.com/welliton-insight/html-label-dapic-prod/main/Etiqueta-camisa-basica-p4.html?t=${new Date().getTime()}`;
     const resTemplate = await fetch(urlTemplate);
     const buffer = await resTemplate.arrayBuffer();
     const decoder = new TextDecoder("utf-8");
