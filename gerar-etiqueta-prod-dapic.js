@@ -346,7 +346,7 @@ const formatClienteFinderStyle = (text, maxLength = 66) => {
         const clienteFormatado = formatClienteFinderStyle(cliente, 66);
 
         // Substitui o '#' por '?lote=VALOR?#'
-        const currentUrl = currentUrl.replace('#', `?lote=${lote}?#`);
+        const novaUrl = currentUrl.replace('#', `?lote=${lote}?#`);
 
     // =========================================================================
     // STEP 1: Gerador de QR Code com Dupla Camada (API -> Fallback Local)
@@ -371,7 +371,7 @@ const formatClienteFinderStyle = (text, maxLength = 66) => {
                     reject(new Error("Falha na rede ao chamar api.qrserver.com"));
                 };
     
-                img.src = `https://api.qrserver.com/v1/create-qr-code/?size=${targetSize}x${targetSize}&data=${encodeURIComponent(currentUrl)}`;
+                img.src = `https://api.qrserver.com/v1/create-qr-code/?size=${targetSize}x${targetSize}&data=${encodeURIComponent(novaUrl)}`;
             });
             console.log("QR Code carregado com sucesso do servidor da API.");
         } 
@@ -407,7 +407,7 @@ const formatClienteFinderStyle = (text, maxLength = 66) => {
     
                 const qrContainer = document.createElement('div');
                 new window.QRCode(qrContainer, {
-                    text: currentUrl,
+                    text: novaUrl,
                     width: targetSize,
                     height: targetSize,
                     colorDark: "#000000",
@@ -439,7 +439,7 @@ const formatClienteFinderStyle = (text, maxLength = 66) => {
                 console.log("QR Code em Base64 local gerado com sucesso.");
             } catch (fallbackError) {
                 console.error("Ambos os métodos de QR Code falharam:", fallbackError.message);
-                qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=${targetSize}x${targetSize}&data=${encodeURIComponent(currentUrl)}`;
+                qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=${targetSize}x${targetSize}&data=${encodeURIComponent(novaUrl)}`;
             }
         }
     
@@ -449,7 +449,7 @@ const formatClienteFinderStyle = (text, maxLength = 66) => {
             </div>
         `.trim();
     
-     
+         
         // Dicionário de tags base comuns (Usa o clienteFormatado com tratamento anti-quebra)
         const tags = {
             "#Cliente": cliente,
