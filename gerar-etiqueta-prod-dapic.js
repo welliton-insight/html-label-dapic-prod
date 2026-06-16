@@ -344,6 +344,112 @@ const formatClienteFinderStyle = (text, maxLength = 66) => {
         const Qtd = tr.querySelector('td[data-index="6"]')?.textContent.trim() || "";
         const OP = empresa && cod ? `${empresa} - ${cod}` : cod;
         const clienteFormatado = formatClienteFinderStyle(cliente, 66);
+
+        // Substitui o '#' por '?lote=VALOR?#'
+        const currentUrl = currentUrl.replace('#', `?lote=${lote}?#`);
+
+    // =========================================================================
+    // STEP 1: Gerador de QR Code com Dupla Camada (API -> Fallback Local)
+    // =========================================================================
+        try {
+            console.log("Tentando gerar QR Code via api.qrserver.com...");
+            qrSrc = await new Promise((resolve, reject) => {
+                const img = new Image();
+                const timeout = setTimeout(() => {
+                    img.onload = null;
+                    img.onerror = null;
+                    reject(new Error("api.qrserver.com expirou após 3500ms"));
+                }, 3500);
+    
+                img.onload = () => {
+                    clearTimeout(timeout);
+                    resolve(img.src);
+                };
+    
+                img.onerror = () => {
+                    clearTimeout(timeout);
+                    reject(new Error("Falha na rede ao chamar api.qrserver.com"));
+                };
+    
+                img.src = `https://api.qrserver.com/v1/create-qr-code/?size=${targetSize}x${targetSize}&data=${encodeURIComponent(currentUrl)}`;
+            });
+            console.log("QR Code carregado com sucesso do servidor da API.");
+        } 
+        catch (apiError) {
+            console.warn(apiError.message);
+            console.log("Alternando para o método de contingência: qrcode.js...");
+    
+            try {
+                if (!window.QRCode) {
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+                        
+                        const timeout = setTimeout(() => {
+                            script.onload = null;
+                            script.onerror = null;
+                            reject(new Error("Injeção do qrcode.js expirou após 3500ms"));
+                        }, 3500);
+    
+                        script.onload = () => {
+                            clearTimeout(timeout);
+                            resolve();
+                        };
+    
+                        script.onerror = () => {
+                            clearTimeout(timeout);
+                            reject(new Error("Falha ao carregar o script qrcode.js"));
+                        };
+    
+                        document.head.appendChild(script);
+                    });
+                }
+    
+                const qrContainer = document.createElement('div');
+                new window.QRCode(qrContainer, {
+                    text: currentUrl,
+                    width: targetSize,
+                    height: targetSize,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: window.QRCode.CorrectLevel.H
+                });
+    
+                qrSrc = await new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => {
+                        clearInterval(interval);
+                        reject(new Error("Renderização do qrcode.js expirou após 3500ms"));
+                    }, 3500);
+    
+                    const interval = setInterval(() => {
+                        const qrImgElement = qrContainer.querySelector('img');
+                        const qrCanvasElement = qrContainer.querySelector('canvas');
+                        
+                        if (qrImgElement && qrImgElement.src && qrImgElement.src.startsWith('data:')) {
+                            clearTimeout(timeout);
+                            clearInterval(interval);
+                            resolve(qrImgElement.src);
+                        } else if (qrCanvasElement) {
+                            clearTimeout(timeout);
+                            clearInterval(interval);
+                            resolve(qrCanvasElement.toDataURL());
+                        }
+                    }, 100);
+                });
+                console.log("QR Code em Base64 local gerado com sucesso.");
+            } catch (fallbackError) {
+                console.error("Ambos os métodos de QR Code falharam:", fallbackError.message);
+                qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=${targetSize}x${targetSize}&data=${encodeURIComponent(currentUrl)}`;
+            }
+        }
+    
+        const qrHtml = `
+            <div style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; text-align: center;">
+                <img src="${qrSrc}" style="width: ${targetSize}px; height: ${targetSize}px; display: block; margin: 0 auto;" />
+            </div>
+        `.trim();
+    
+     
         // Dicionário de tags base comuns (Usa o clienteFormatado com tratamento anti-quebra)
         const tags = {
             "#Cliente": cliente,
