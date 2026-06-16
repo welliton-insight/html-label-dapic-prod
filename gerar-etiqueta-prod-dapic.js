@@ -208,6 +208,12 @@ const formatClienteFinderStyle = (text, maxLength = 66) => {
         }
     }
 
+    // --- Código adicionado abaixo ---
+    if (cliente && cliente.includes(" - ")) {
+        const ultimoTraco = cliente.lastIndexOf(" - ");
+        cliente = cliente.substring(0, ultimoTraco);
+    }
+
     // Aplica a redução dinâmica no nome do cliente (Máximo 55 caracteres com corte central)
     const clienteFormatado = cliente;
 
